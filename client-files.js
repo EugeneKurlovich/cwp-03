@@ -8,6 +8,9 @@ const serverNO = 'DEC';
 let allFiles = [];
 const nextFileStatus = 'NEXTFILE';
 const client = new net.Socket();
+const bufferSep = '|||||';
+
+const endSendingFile = "ENDFILE";
 
 client.setEncoding('utf8');
 
@@ -29,14 +32,12 @@ client.connect(port, function()
 
 
 client.on('data', function(data) {
-    if (data === serverOK) 
+    if (data === serverOK || data == nextFileStatus) 
     {
         console.log("Connected is open");
+        sendNextFile()
 
 
-
-
-         client.destroy();
     }
     
 
@@ -52,6 +53,23 @@ client.on('data', function(data) {
 
 });
 
+
+function sendNextFile() {
+    if (allFiles.length !== 0) {
+
+        let tmpFileName = allFiles.shift();
+
+        fs.readFile(tmpFileName, (err, data) => {
+
+            client.write(data);
+            client.write(bufferSep + path.basename(tmpFileName));
+            client.write(bufferSep + endSendingFile);
+
+        });
+    } else {
+        client.end();
+    }
+}
 
 function readFiles(file) {
     fs.readdirSync(file).forEach((i) => {
