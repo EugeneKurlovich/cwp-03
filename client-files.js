@@ -19,7 +19,12 @@ client.on('data', function(data) {
     if (data === serverOK) 
     {
         console.log("Connected is open");
+        console.log("Input Dir: ");
 
+        for (let i = 0; i < process.argv.length- 2; i ++)
+        {
+        console.log("Path: " + process.argv[i+2]);
+        }
 
         client.destroy();
 
