@@ -32,15 +32,10 @@ client.connect(port, function()
 
 
 client.on('data', function(data) {
-    if (data === serverOK || data == nextFileStatus) 
-    {
-        console.log("Connected is open");
+    if (data === nextFileStatus || data === serverOK ) 
+    {        
         sendNextFile()
-
-
     }
-    
-
     else if (data === serverNO) 
     {
         console.log(data);
@@ -66,7 +61,8 @@ function sendNextFile() {
             client.write(bufferSep + endSendingFile);
 
         });
-    } else {
+    } else 
+    {
         client.end();
     }
 }
