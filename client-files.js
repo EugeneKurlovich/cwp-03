@@ -1,87 +1,68 @@
-const net = require('net');
-const port = 8124;
-const fs = require('fs');
-const path = require('path');
-const startConnect = 'FILES';
-const serverOK = 'ACK';
-const serverNO = 'DEC';
-let allFiles = [];
-const nextFileStatus = 'NEXTFILE';
-const client = new net.Socket();
-const bufferSep = '|||||';
+const net = require('net'); 
+const path = require('path'); 
+const port = 8124; 
+const ASK = 'ASK'; 
+const DEC = 'DEC'; 
+const FILES = 'FILES'; 
+let fs = require('fs'); 
+let isFILES = false; 
+let directories = process.argv.slice(2); 
+let files = []; 
 
-const endSendingFile = "ENDFILE";
+function ReadFilesInDirectory(dirPath) { 
+fs.readdir(path.normalize(dirPath), function (err, filess) { 
+filess.forEach(function (item) { 
+fs.stat(path.normalize(dirPath + path.sep + item), function (err, stat) { 
+if (stat.isDirectory()) { 
+ReadFilesInDirectory(dirPath + path.sep + item); 
+} 
+else if (stat.isFile()) { 
+files.push(dirPath + path.sep + item); 
+} 
+}) 
+}); 
+}); 
+} 
 
-client.setEncoding('utf8');
+directories.forEach((value) => { 
+ReadFilesInDirectory(value); 
+}); 
 
-client.connect(port, function() 
-{
-    console.log("Input Dir: ");
+const client = new net.Socket(); 
 
-        for (let i = 0; i < process.argv.length- 2; i ++)
-        {
-        console.log("Path: " + process.argv[i+2]);
-        }
-    
-     getDirectory().forEach((i) => {
-        readFiles(i);
-    });
+function sendFile() { 
+let filePath = files.pop(); 
+client.setNoDelay(true); 
+fs.readFile(filePath, function (err, data) { 
+client.write(data.toString('base64') + '{', function () { 
+client.write(path.basename(filePath) + '{', function () { 
+client.write("FEND" + '{', function () { }); 
+}); 
+}); 
+}); 
 
-        client.write(startConnect);   
+} 
+
+client.setEncoding('utf8'); 
+
+client.connect(port, function () { 
+console.log('Connected'); 
+client.write(FILES); 
+}); 
+
+client.on('data', function (data) { 
+if (data === ASK && !isFILES) { 
+isFILES = true; 
+sendFile(); 
+} 
+if (files.length === 0) { 
+client.destroy(); 
+} 
+else if (data === "File saved" && files.length !== 0 && isFILES) { 
+sendFile(); 
+} 
+}); 
+
+client.on('close', function () { 
+console.log('Connection closed'); 
 });
-
-
-client.on('data', function(data) {
-    if (data === nextFileStatus || data === serverOK ) 
-    {        
-        sendNextFile()
-    }
-    else if (data === serverNO) 
-    {
-        console.log(data);
-        console.log("Connected is close");
-        console.log("Disconnected");
-        client.destroy();
-
-    }
-
-
-});
-
-
-function sendNextFile() {
-    if (allFiles.length !== 0) {
-
-        let tmpFileName = allFiles.shift();
-
-        fs.readFile(tmpFileName, (err, data) => {
-
-            client.write(data);
-            client.write(bufferSep + path.basename(tmpFileName));
-            client.write(bufferSep + endSendingFile);
-
-        });
-    } else 
-    {
-        client.end();
-    }
-}
-
-function readFiles(file) {
-    fs.readdirSync(file).forEach((i) => {
-
-        let filePath = path.normalize(file + '\\' + i);
-        if (fs.statSync(filePath).isFile()) {
-            allFiles.push(filePath);
-        }
-        else {
-            readAllFilesNames(filePath);
-        }
-    })
-}
-
-
-function getDirectory() 
-{
-    return process.argv.slice(2);
-}
