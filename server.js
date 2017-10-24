@@ -31,10 +31,11 @@ const server = net.createServer((client) => {
             function (err) {
                 if (err) {
                 console.log(err);
-                }
+            }
+             client.write(ASK);
             });
             isFILES = true;
-            client.write(ASK);
+           
         }
         else if (data === DEC) {
         client.write(DEC);

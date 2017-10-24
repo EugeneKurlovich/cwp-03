@@ -6,27 +6,39 @@ const DEC = 'DEC';
 const FILES = 'FILES'; 
 let fs = require('fs'); 
 let isFILES = false; 
-let directories = process.argv.slice(2); 
-let files = []; 
 
-function ReadFilesInDirectory(dirPath) { 
+let files = []; 
+let counter  = 0;
+
+
+function ReadFilesInDirectory(dirPath,callback) { 
+
     fs.readdir(path.normalize(dirPath), function (err, filess) {
+        console.log(filess);
         filess.forEach(function (item) {
             fs.stat(path.normalize(dirPath + path.sep + item), function (err, stat) {
                 if (stat.isDirectory()) {
                     ReadFilesInDirectory(dirPath + path.sep + item);
                 }
-                else if (stat.isFile()) {
+                else if (stat.isFile() ) {
                     files.push(dirPath + path.sep + item);
                 }
             })
+           callback();
         });
     });
 } 
 
-directories.forEach((value) => { 
-    ReadFilesInDirectory(value);
-}); 
+
+
+let directories = process.argv.slice(2); 
+     directories.forEach((value) => { 
+    ReadFilesInDirectory(value, function()
+    {
+            console.log("End!!!");
+    });
+});
+
 
 const client = new net.Socket(); 
 
@@ -44,10 +56,13 @@ function sendFile() {
 
 client.setEncoding('utf8'); 
 
-client.connect(port, function () { 
+
+       
+client.connect(port, function () {   
     console.log('Connected');
     client.write(FILES);
 }); 
+    
 
 client.on('data', function (data) { 
     if (data === ASK && !isFILES) {
